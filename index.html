@@ -735,15 +735,23 @@
         let tipsInterval;
         const tipsElem = document.getElementById('tips-text');
         
-        function startTipsAnimation() {
+        async function startTipsAnimation() {
             // 先顯示第一則
-            changeTip();
+            await changeTip();
 
-            // 設定每 15 秒切換
-            setInterval(async () => {
-                await typeWriterEffect(tipsElem, ""); // 刪除
-                changeTip(); // 換內容 (這一步會被下面的 typeWriterEffect 覆蓋，但我們邏輯分開)
-            }, 15000);
+            // 改用 while 迴圈搭配 await
+            // 這確保了：必須等「打字特效跑完」->「等待15秒」->「刪除特效跑完」->「打字特效跑完」
+            // 才會進入下一次循環，絕對不會重疊
+            while (true) {
+                // 等待 15 秒
+                await new Promise(resolve => setTimeout(resolve, 15000));
+                
+                // 刪除舊文字 (等待刪除完成)
+                await typeWriterEffect(tipsElem, "");
+                
+                // 換新內容 (等待打字完成)
+                await changeTip();
+            }
         }
 
         async function changeTip() {
