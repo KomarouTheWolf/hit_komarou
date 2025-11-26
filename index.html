@@ -14,6 +14,8 @@
             --btn-disabled: #7f8c8d;
             --btn-restart: #27ae60;
             --glow-color: #f1c40f;
+            --victory-color: #f39c12;
+            --tips-bg: rgba(0, 0, 0, 0.6);
         }
 
         body {
@@ -26,19 +28,21 @@
             min-height: 100vh;
             margin: 0;
             padding: 20px;
+            padding-bottom: 60px; /* 留給 Tips 的空間 */
             box-sizing: border-box;
+            flex-direction: column; /* 為了放 footer */
         }
 
-        /* 主容器：左右佈局 */
         .game-container {
             display: flex;
             flex-direction: row;
             gap: 20px;
             width: 900px;
             max-width: 100%;
+            /* 讓遊戲區域置中 */
+            margin: auto; 
         }
 
-        /* 左側面板：資訊與操作 */
         .left-panel {
             flex: 1;
             background: var(--panel-bg);
@@ -49,9 +53,9 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
+            position: relative;
         }
 
-        /* 右側面板：戰鬥紀錄 */
         .right-panel {
             flex: 1;
             background: var(--panel-bg);
@@ -60,36 +64,58 @@
             display: flex;
             flex-direction: column;
             box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-            max-height: 500px; /* 限制高度 */
+            height: 500px; /* 固定高度 */
         }
 
         h1 { margin-bottom: 20px; font-size: 1.8rem; margin-top: 0; }
 
-        /* 怪物圖示 */
+        .monster-container {
+            position: relative;
+            display: inline-block;
+        }
+
         .monster-box {
             font-size: 8rem;
             margin: 20px 0;
+            display: inline-block;
             transition: transform 0.1s;
             cursor: default;
             user-select: none;
+            position: relative;
+            z-index: 1;
         }
         
-        .shake { animation: shake 0.5s; }
+        .bone-effect {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            font-size: 5rem;
+            transform: translate(-50%, -50%) scale(0);
+            pointer-events: none;
+            z-index: 2;
+            opacity: 0;
+        }
 
-        /* HP 條區域 */
+        .bone-animate {
+            animation: boneHit 0.6s ease-out;
+        }
+
+        .shake { animation: shake 0.5s; }
+        .shake-hard { animation: shakeHard 0.5s; }
+        .spin { animation: spin 0.8s ease-in-out; }
+
         .hp-bar-container {
             width: 100%;
             background-color: #555;
             height: 30px;
             border-radius: 15px;
-            overflow: hidden; /* 為了讓 bar 不超出圓角 */
+            overflow: hidden;
             margin-bottom: 20px;
             position: relative;
             box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
             transition: box-shadow 0.3s;
         }
 
-        /* HP 突破上限時的發光特效 */
         .hp-bar-container.overheal-glow {
             box-shadow: 0 0 15px var(--glow-color), inset 0 0 10px var(--glow-color);
             border: 2px solid var(--glow-color);
@@ -102,7 +128,6 @@
             transition: width 0.3s ease, background-color 0.3s;
         }
         
-        /* 突破上限時改變血條顏色 */
         .overheal-fill {
             background-color: #f39c12 !important; 
         }
@@ -119,7 +144,6 @@
             z-index: 2;
         }
 
-        /* 按鈕樣式 */
         #action-btn {
             position: relative;
             padding: 15px 0;
@@ -148,7 +172,6 @@
             color: #ccc;
         }
 
-        /* 下一隻按鈕的特殊色 */
         .btn-next {
             background-color: var(--btn-restart) !important;
         }
@@ -163,16 +186,14 @@
             z-index: -1;
         }
 
-        /* 訊息日誌區 */
         .log-area {
             flex: 1;
             overflow-y: auto;
             font-size: 0.95rem;
             text-align: left;
-            padding-right: 5px; /* 捲軸空間 */
+            padding-right: 5px;
         }
         
-        /* 自訂捲軸 */
         .log-area::-webkit-scrollbar { width: 8px; }
         .log-area::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
         .log-area::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
@@ -185,12 +206,70 @@
             font-weight: bold;
         }
 
-        .log-entry { margin-bottom: 8px; border-bottom: 1px solid #444; padding-bottom: 4px; word-wrap: break-word;}
+        .log-entry { 
+            margin-bottom: 12px; 
+            border-bottom: 1px solid #444; 
+            padding-bottom: 8px; 
+            word-wrap: break-word;
+        }
+        
+        /* 標題樣式 */
+        .log-title {
+            font-size: 1.4rem;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        /* 顏色類別 */
         .type-damage { color: #ff7675; }
         .type-heal { color: #55efc4; }
         .type-miss { color: #ffeaa7; }
         .type-system { color: #74b9ff; font-weight: bold; }
-        .type-status { color: #a29bfe; font-style: italic; font-weight: bold; }
+        .type-status { color: #a29bfe; font-style: italic; font-weight: bold; display: block; margin-top: 2px; }
+        .type-victory { color: var(--victory-color); font-weight: bold; font-size: 1.1em; display: block; margin-top: 5px; }
+
+        /* Tips 區域 */
+        .tips-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: var(--tips-bg);
+            padding: 10px 0;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #bdc3c7;
+            border-top: 1px solid #555;
+            z-index: 100;
+        }
+
+        .tips-label {
+            font-weight: bold;
+            color: #f1c40f;
+            margin-right: 10px;
+        }
+
+        .tips-content {
+            display: inline-block;
+            min-width: 200px;
+            text-align: left;
+        }
+        
+        .cursor {
+            display: inline-block;
+            width: 2px;
+            height: 1em;
+            background-color: #bdc3c7;
+            animation: blink 1s step-end infinite;
+            vertical-align: text-bottom;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
 
         @keyframes shake {
             0% { transform: translate(1px, 1px) rotate(0deg); }
@@ -206,13 +285,42 @@
             100% { transform: translate(1px, -2px) rotate(-1deg); }
         }
 
-        /* 手機版響應式 */
+        @keyframes shakeHard {
+            0% { transform: translate(2px, 2px) rotate(0deg); }
+            10% { transform: translate(-2px, -4px) rotate(-2deg); }
+            20% { transform: translate(-6px, 0px) rotate(2deg); }
+            30% { transform: translate(6px, 4px) rotate(0deg); }
+            40% { transform: translate(2px, -2px) rotate(2deg); }
+            50% { transform: translate(-2px, 4px) rotate(-2deg); }
+            60% { transform: translate(-6px, 2px) rotate(0deg); }
+            70% { transform: translate(6px, 2px) rotate(-2deg); }
+            80% { transform: translate(-2px, -2px) rotate(2deg); }
+            90% { transform: translate(2px, 4px) rotate(0deg); }
+            100% { transform: translate(2px, -4px) rotate(-2deg); }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.2); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
+        @keyframes boneHit {
+            0% { transform: translate(-50%, -150%) rotate(0deg) scale(0.5); opacity: 0; }
+            20% { opacity: 1; }
+            50% { transform: translate(-50%, -50%) rotate(360deg) scale(1.5); opacity: 1; }
+            100% { transform: translate(-50%, -50%) rotate(720deg) scale(1); opacity: 0; }
+        }
+
         @media (max-width: 768px) {
             .game-container {
                 flex-direction: column;
             }
             .right-panel {
                 height: 300px;
+            }
+            body {
+                padding-bottom: 80px; /* 手機版 Tips 可能會換行 */
             }
         }
     </style>
@@ -229,7 +337,10 @@
                 <span class="hp-text" id="hp-text">Loading...</span>
             </div>
     
-            <div class="monster-box" id="monster">🐺</div>
+            <div class="monster-container">
+                <div class="monster-box" id="monster">🐺</div>
+                <div class="bone-effect" id="bone-effect">🦴</div>
+            </div>
     
             <button id="action-btn" onclick="handleBtnClick()">
                 <span class="btn-text" id="btn-text">⚔️ 攻擊</span>
@@ -246,19 +357,80 @@
         </div>
     </div>
 
+    <!-- Tips 區域 -->
+    <div class="tips-container">
+        <span class="tips-label">Tips:</span>
+        <span class="tips-content" id="tips-text"></span><span class="cursor"></span>
+    </div>
+
     <script>
         // --- 1. 遊戲狀態變數 ---
         let monsterMaxHp = 0;
         let monsterCurrentHp = 0;
         let isBattleOver = false;
-        const cooldownTime = 3000;
+        const cooldownTime = 2000;
 
         // --- 2. 武器資料庫 ---
         const weapons = [
             {"col1": "你用小提琴砸向狛克，造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你拿起球棒砸向狛克，造成了", "col2": "點傷害。", "min": 1, "max": 70}, {"col1": "你用冰椎刺向狛克，造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你用巨大的木槌槌向狛克，造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你用小提琴砸向狛克，然而狛克比較耐打，只造成了", "col2": "點傷害。", "min": 1, "max": 40}, {"col1": "你用非洲人的怨念燃燒狛克，造成了", "col2": "點真實傷害。", "min": 50, "max": 150}, {"col1": "你用沖天炮轟炸狛克，造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你用飛矛射向狛克，造成了", "col2": "點傷害。", "min": 10, "max": 120}, {"col1": "你用骨頭丟向狛克，傷害相當顯著，造成了", "col2": "點傷害。", "min": 70, "max": 140}, {"col1": "你用拳頭揍向狛克，造成了", "col2": "點傷害。", "min": 1, "max": 80}, {"col1": "你拿willisome的東西丟向狛克，狛克果斷的撲接了，並往旁邊一甩。", "col2": "很遺憾的，完全沒有傷害。", "min": 0, "max": 0}, {"col1": "你用長長的木棒貫穿了狛克，造成了", "col2": "點傷害。", "min": 50, "max": 100}, {"col1": "你召喚洪水襲向狛克，造成了", "col2": "點傷害。非常遺憾，北極狼還是會游泳的。", "min": 1, "max": 10}, {"col1": "你用身高鄙視狛克，造成了", "col2": "點真實傷害。", "min": 80, "max": 180}, {"col1": "你用肚肚壓住狛克，造成了...", "col2": "不，狛克看起來非常享受，傷害被免疫掉了。", "min": 0, "max": 0}, {"col1": "你召雷劈向狛克，造成了", "col2": "點傷害。", "min": 1, "max": 140}, {"col1": "你抄起一把扇子直擊狛克面門，造成了", "col2": "點傷害。", "min": 1, "max": 60}, {"col1": "你抽刀斬向狛克，造成了", "col2": "點傷害。", "min": 30, "max": 110}, {"col1": "你用巧克力丟向狛克，狛克瞬間接住並吃掉了。狛克回復了", "col2": "點血量。", "min": -100, "max": -1}, {"col1": "你撲抱狛克，造成了", "col2": "點驚嚇傷害，並且狛克順手回抱了你。", "min": 1, "max": 5}, {"col1": "你用腳踹向狛克，精準命中要害，造成了不可言喻的傷害。", "col2": "a", "min": 150, "max": 300}, {"col1": "你從後面接近狛克並突然抓住尾巴，造成了", "col2": "點傷害。似乎是被嚇到的關係，你聽到狛克發出悶哼聲。", "min": 1, "max": 20}, {"col1": "你用拉麵丟向狛克，狛克避開了碗吃完了拉麵，不只沒造成傷害，甚至回復了", "col2": "點血量。", "min": -100, "max": -1}, {"col1": "你用板凳砸向狛克，造成了", "col2": "點傷害。", "min": 100, "max": 150}, {"col1": "你在狛克的晚餐裡偷偷放了辣椒，吃下去的狛克受到了", "col2": "點傷害。", "min": 40, "max": 100}, {"col1": "你在狛克耳朵旁邊突然吹氣，造成了", "col2": "點驚嚇傷害。狛克瞬間跳起來遠離你五公尺，看來嚇得不輕。", "min": 1, "max": 100}, {"col1": "你隨便拿個什麼就砸向狛克，丟出去的冷凍牛排傷害顯著，造成了", "col2": "點傷害。", "min": 150, "max": 200}, {"col1": "你隨便拿個什麼就砸向狛克，丟出去的布偶傷害薄弱，對狛克造成了", "col2": "點傷害。", "min": 1, "max": 5}, {"col1": "你隨便拿個什麼就砸向狛克，丟出去的麻將對狛克造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你隨便拿個什麼就砸向狛克，丟出去的守護神封印罐中跳出了水星神，幫狛克回復了", "col2": "點血量。", "min": -80, "max": -40}, {"col1": "你在狛克面前胡出了國士無雙，造成了", "col2": "點真實傷害。", "min": 80, "max": 120}, {"col1": "你把黑糖珍奶丟給狛克，狛克感激地接住並且開始狂喝，回復了", "col2": "點血量。", "min": -150, "max": -50}, {"col1": "你拉開狛克的衣領把冰塊丟進去，造成了", "col2": "點傷害，然後抗寒的雪狼狛克淡定的拿出來了。", "min": 1, "max": 10}, {"col1": "你把有很多獸太的「教學影片」傳送給狛克，上課不小心打開聊天室的狛克紅著臉衝出教室，造成了", "col2": "點波蘭真實傷害。", "min": 20, "max": 30}, {"col1": "你用字典砸向狛克，造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你用鑽石劍刺向狛克，狛克舉盾防禦，只造成了", "col2": "點傷害。", "min": 1, "max": 20}, {"col1": "你掏出一把PKM對狛克掃射，造成了", "col2": "點傷害。", "min": 100, "max": 200}, {"col1": "你掏出一把PKM對狛克掃射，造成了", "col2": "點傷害。", "min": 100, "max": 200}, {"col1": "你掏出一把PKM對狛克掃射，造成了...", "col2": "狛克的偶爾防彈特性觸發了，沒有造成傷害。", "min": 0, "max": 0}, {"col1": "你在狛克耳邊輕聲說道「TEmPTaTiON」，狛克的手臂不自覺的開始痠痛，造成了", "col2": "點傷害。", "min": 1, "max": 80}, {"col1": "你Lost River了狛克，造成了", "col2": "點真實傷害。", "min": 100, "max": 180}, {"col1": "你用桌電主機砸向狛克，造成了", "col2": "點傷害。", "min": 50, "max": 150}, {"col1": "你用人孔蓋掀翻狛克，造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你/tp 狛克 0 -64 0，造成了", "col2": "點虛空傷害。", "min": 20, "max": 150}, {"col1": "你舉起了壓路機丟向狛克，狛克說了句「是和我同類型的替身呢」之後就瞬間移動到你面前。", "col2": "很遺憾，沒有命中。", "min": 0, "max": 0}, {"col1": "你把狛克埋進雪地裡，造成了", "col2": "點傷害，然後抗寒的雪狼狛克在地上做出了雪天使。", "min": 1, "max": 15}, {"col1": "你把馬鈴薯砸向狛克，造成了", "col2": "點傷害。", "min": 1, "max": 60}, {"col1": "你把狛克國中時的群組聊天紀錄給狛克看，狛克只看了一眼就驚慌失措的狂奔，造成了", "col2": "點真實傷害。", "min": 120, "max": 200}, {"col1": "你普攻巴龍之後丟下被擊飛的狛克走掉，巴龍對狛克造成了", "col2": "點傷害。", "min": 10, "max": 100}, {"col1": "你用Pocky刺向狛克，狛克敏捷的叼住另外一端吃掉了。狛克回復了", "col2": "點血量。", "min": -50, "max": -1}, {"col1": "你在八月把狛克拖出房間，狛克瞬間融化成液體，造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你對狛克打出了一組同花順。造成了...", "col2": "狛克打出一張迴轉，攻擊被免疫了。", "min": 0, "max": 0}, {"col1": "你無聲無息的站在狛克背後，十分鐘後轉頭的狛克嗚汪啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊！", "col2": "a", "min": 20, "max": 80}, {"col1": "你用鞭子抽向狛克，造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你用椰子丟向狛克，造成了", "col2": "點傷害。", "min": 20, "max": 120}, {"col1": "你用板磚拍向狛克，造成了", "col2": "點傷害。", "min": 1, "max": 90}, {"col1": "你在狛克附近剖開了榴槤，對鼻子靈敏的狛克造成了", "col2": "點傷害。", "min": 40, "max": 70}, {"col1": "你用加了瀉藥的巧克力丟向狛克，狛克瞬間接住吃掉之後才發現不對勁。在三小時後造成了", "col2": "點傷害。", "min": 20, "max": 100}, {"col1": "你拉著狛克上了計程車從台北開到高雄，易暈車的狛克到了之後跪地狂吐。造成了", "col2": "點傷害。", "min": 30, "max": 120}, {"col1": "你用起司片甩了狛克一巴掌，造成了", "col2": "點傷害。", "min": 1, "max": 80}, {"col1": "你在狛克面前買走了最後一個薯餅，造成了", "col2": "點真實傷害。", "min": 70, "max": 120}, {"col1": "木板不足以支撐兩個人的重量，你成功把狛克趕了下水，冰冷的海水對狛克造成了", "col2": "點傷害。", "min": 40, "max": 90}, {"col1": "真相只有一個！你把麻醉針射向了狛克的頸部，造成了", "col2": "點傷害。", "min": 1, "max": 10}, {"col1": "你觸發了雪狛bot的bug，咚！Discord沒有回應，狛克來不及儲存剛剛寫的程式。兩小時心血白費的狛克受到", "col2": "點真實傷害。", "min": 100, "max": 150}, {"col1": "狛克太久沒有回去以爾索拉，你告知狛克兩隻小狸貓決定離他而去的消息，造成了", "col2": "點傷害。", "min": 80, "max": 120}, {"col1": "你偷偷溜進了狛克的房間，把Discord介面設定成明亮，在深夜使用Discord的狛克受到了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你用力把足球踢向狛克，但是狛克成功抓住了，周圍的小朋友一擁而上稱讚狛克，被治癒的狛克回復了", "col2": "點血量。", "min": -100, "max": -1}, {"col1": "你用正太音對著狛克說「あいしてる」，心臟爆擊的狛克回復了", "col2": "點血量，隨即幸福的閉上眼睛。", "min": -130, "max": -1}, {"col1": "狛克爬上了一連串的階梯，回到宿舍狛克才發現東西漏了在教室，看著那又長又陡斜的階梯，狛克受到了", "col2": "點真實傷害。", "min": 1, "max": 150}, {"col1": "你上前追問狛克之前的點歌活動甚麼時候唱你的歌，狛克因為心理壓力受到了", "col2": "點真實傷害。", "min": 1, "max": 70}, {"col1": "你把珍奶丟給狛克，狛克感激地接住並且開始狂喝才發現那是無糖的，狛克受到了", "col2": "點傷害。", "min": 50, "max": 150}, {"col1": "你扯著狛克的毛試圖把藍色的部分撕掉，造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你用烤吐司砸向狛克，狛克飛撲並瞬間啃完，回復了", "col2": "點血量。", "min": -80, "max": -40}, {"col1": "你把狛克Live a Hero帳號的石頭抽光，而且還沒抽到任何新角，狛克受到了", "col2": "點真實傷害，而且狛克從今以後都會恨你。", "min": 100, "max": 120}, {"col1": "你不小心把鬧鬼魔鏡玩裂，還留在鬼屋裡的狛克瞬間被鬼...", "col2": "狛克光速燒掉手上的聖木，逃過了鬼的攻擊。", "min": 0, "max": 0}, {"col1": "你咬了狛克一口，造成了", "col2": "點傷害。", "min": 1, "max": 50}, {"col1": "你在狛克打Maimai時連機故意選了那個很會魔法的阿嬤，完全跟不上的狛克不小心撞到指甲，造成了", "col2": "點傷害。", "min": 60, "max": 140}, {"col1": "你用字典砸向狛克，可是是用角，造成了", "col2": "點傷害。", "min": 1, "max": 150}, {"col1": "你故意推薦了一本還沒完結的小說給狛克，看完卻看不到結局的狛克產生了強烈的怨念，造成了", "col2": "點真實傷害。", "min": 1, "max": 80}, {"col1": "你發現狛克房間沒鎖走了進去，躺在床上的狛克嗚汪啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊！", "col2": "a", "min": 100, "max": 200}, {"col1": "你用棒球丟向狛克，造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你用十字架砸向狛克，很可惜狛克是神聖屬性不會被超渡，造成了", "col2": "點傷害。", "min": 1, "max": 10}, {"col1": "你用融化的冰淇淋砸向狛克，全身變得黏答答的狛克精神不堪重負，造成了", "col2": "點真實傷害。", "min": 70, "max": 170}, {"col1": "你拿著雪花冰朝狛克灌下去，狛克成功在碗到達地面前全部解決，回復了", "col2": "點血量。", "min": -90, "max": -30}, {"col1": "你用在太陽下曬了三小時的鐵板襲向狛克，狛克用魔法強制降溫，只造成了", "col2": "點傷害。", "min": 1, "max": 30}, {"col1": "你用飛鏢射向狛克，造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你拿燒成焦炭的吐司強制餵食狛克，造成了", "col2": "點傷害。", "min": 50, "max": 120}, {"col1": "你叫來了FBI，被帶走審訊的狛克被FBI造成了", "col2": "點傷害，而且狛克雙腿發軟的回來。", "min": 100, "max": 200}, {"col1": "你在狛克在的語音頻道裡炸麥，造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你在跟狛克剪刀石頭布的時候往狛克臉上出了石頭，造成了", "col2": "點傷害。", "min": 1, "max": 70}, {"col1": "你把狛克的棉被搶走，造成了", "col2": "點寒氣傷害。", "min": 50, "max": 100}, {"col1": "你扯著狛克的毛試圖把藍色的部分撕掉，造成了...", "col2": "狛克抓住你拿起一捆藍色膠帶把你纏成木乃伊，反過來對你造成了owowowo點傷害。", "min": 0, "max": 0}, {"col1": "你想不到該怎麼打狛克，但是狛克仍然受到了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你開著卡車撞向叼著吐司剛跑到路口的狛克，狛克受到了", "col2": "點傷害。", "min": 50, "max": 250}, {"col1": "你開著卡車撞向叼著吐司剛跑到路口的狛克，狛克受到了...", "col2": "狛克身上發出女神的光芒！你被傳送到異世界了！", "min": 0, "max": 0}, {"col1": "你掏出精靈球往狛克頭頂bonk下去，造成了", "col2": "點傷害。", "min": 50, "max": 100}, {"col1": "你在殯儀師狛克面前把鴨腿給報警了，造成了", "col2": "點真實傷害，並且他會恨你。", "min": 40, "max": 90}, {"col1": "你拿熊皮袋把狛克整隻裝起來綁住，造成了", "col2": "點窒息傷害。", "min": 1, "max": 70}, {"col1": "你強行餵了狛克耐久值1%的生狼肉，上吐下瀉的狛克受到了", "col2": "點傷害。", "min": 80, "max": 160}, {"col1": "你用望潮吸取狛克的靈魂，造成了", "col2": "點真實傷害。", "min": 40, "max": 100}, {"col1": "你用青鸞朝著狛克射擊，造成了...", "col2": "狛克迅速位移，躲掉了這發攻擊！", "min": 0, "max": 0}, {"col1": "你塞了一隻長得很怪的五格狗給狛克，回想起某款拼圖遊戲恐懼的狛克受到了", "col2": "點真實傷害。", "min": 20, "max": 110}, {"col1": "你對狛克使用了危險的杵，狛克拚死防禦，但仍然受到了", "col2": "點傷害。", "min": 100, "max": 200}, {"col1": "你對狛克使用了危險的杵，造成了...", "col2": "你忘記你有危險的缽了！危險的杵對你造成了owowowo點傷害！", "min": 0, "max": 0}, {"col1": "你舉起消防斧砍向狛克，造成了", "col2": "點傷害。", "min": 70, "max": 150}, {"col1": "你對狛克使用了急救，回復了", "col2": "點血量。", "min": -40, "max": -1}, {"col1": "你對狛克使用了急救，回復了......大失敗！你的醫療包敲到了狛克的腳，造成了", "col2": "點傷害，並且伴隨著狛克的淒厲悲鳴。", "min": 1, "max": 40}, {"col1": "你對狛克扔了一個黑色的酷盤子，上面的毒對狛克造成了", "col2": "點傷害。", "min": 20, "max": 100}, {"col1": "你用普通心理學課本砸向狛克，造成了", "col2": "點傷害。", "min": 50, "max": 100}
         ];
 
-        // --- 3. 輔助函式 ---
+        // --- 3. Tips 資料庫 ---
+        const tipsList = [
+            "大部分的行動都是根據現實的狛克設計的，這代表同樣的行動對狛克有相同規模的傷害。",
+            "聽說舊版的討伐狛克程式碼裡，二維表格資料是用一維列表讀取的。",
+            "傷害是隨機的，取決於狛克有沒有閃。",
+            "不以物理方式造成的傷害會對狛克造成無法防禦的真實傷害，但狛克的防禦力是0所以和物理傷害沒有差別。",
+            "狛克曾經以冒險者的身分前往以爾索拉，並在旅途中認識了兩隻小狸貓。",
+            "每次行動都是隨機的，普通行動總共大概有100種左右的行動。",
+            "普通行動中，可以造成最高傷害的行動方式是不可言喻的傷害。",
+            "你今天吃吐司了嗎？",
+            "我們不是在膠帶工廠重新讓薩摩耶變成狛克的。",
+            "汪！",
+            "嗷嗷嗷！",
+            "狛克吃的吐司是真的吐司，沒有狐狸因此受到傷害。",
+            "請勿在現實模仿大部分的行動，現實中的狛克是會報復的。",
+            "狛克是血統純正的雪狼！",
+            "我們的主機使用純天然吐司製作，不添加任何...欸欸欸怎麼燒起來了快救火！",
+            "我們的主機使用純天然吐司製作，不添加任何...喂那邊那個給我停下來不準偷吃！",
+            "我們的主機使用純天然吐司製作，不添加任何防腐劑。",
+            "來猜猜看tips的數量有沒有比行動數還多 :D",
+            "int(int(random.randint(5,10))+int(ad_num))",
+            "你知道嗎？我不知道！",
+            "測試，測試，123？這個麥克風好像出了問題.....欸？已經開始錄音了嗎？",
+            "當你認真看完這個tips的時候，你的冷卻大概也好了。",
+            "貓可以是固體也可以是液體，而狛克可以是固體也可以是氣體。",
+            "關於BOSS要叫什麼我們打了一架來決定，最後誰打輸大家都知道了。",
+            "為了提供討伐狛克的武器，我們有每天500金幣的預算購買器材及雇用商店員工。",
+            "用來討伐的狛克是另一個世界的的狛克，擁有巨大的爪子，世界觀與狛克本體及設定不共用。",
+            "TEmPTaTiON對狛克的傷害有被調降過，這是因為狛克終於把他打上100%了。",
+            "這個是第1000條tips喔！欸？老闆你說多打了一個零是什麼意思？",
+            "如果網頁卡住了，請嘗試對著螢幕大喊「狛克！」三聲，雖然通常沒有用。",
+            "按鈕的冷卻時間是為了讓狛克不要死得這麼快，順便讓你有機會看tips。",
+            "console.log('狛克'); // 這裡什麼都沒有，別看了。",
+            "伺服器目前運作良好，除了偶爾會被掉落的吐司屑卡住風扇。",
+            "這個網頁雖然是gemini產的，但遊戲本身是根據3年前狛克寫的雪狛bot。",
+            "雖然是雪狼，但狛克對熱毫無抗性。",
+            "狛克的尾巴是弱點，請小心觸碰。",
+            "不要問為什麼骨頭有動畫。",
+            "「尾刀」有獨立設計的原因是原版討伐狛克是多人即時討伐戰，其他人隨時能搶你的刀。",
+            "連續觸發行動的機率是 20%，運氣夠好你可以一直連擊。",
+            "當血條發光時，代表狛克已經補血補到溢出了，請盡快幫他「減肥」。",
+            "鞭屍是不道德的，但很爽。",
+            "遇到「嗚汪啊啊啊」的時候，請將音量調小... 哦對，這遊戲沒聲音。",
+            "晚餐吃什麼？不如吃吐司夾骨頭吧。",
+            "你相信引力嗎？我不相信，所以有時候會飛起來。",
+            "這是一條沒有意義的 Tip，用來充數的。",
+            "404 Not Found: 狛克的智商未找到。",
+            "好想睡覺啊......",
+            "你看到的tips都是狛克一個一個字打出來再刪掉的。",
+            "狛克的偶爾防彈特性源自於他許下的願望被其他人補了一句制約。",
+            "正在嘗試與外星人建立連線... 連線失敗，請繼續攻擊狛克。",
+            "這行字的背景顏色是 rgba(0, 0, 0, 0.6)。",
+            "Loading... 99%... 其實早就讀取完了，只是想讓你等等。"
+        ];
+
+        // --- 4. 輔助函式 ---
         function getDownHpChange(oldHp, newHp, threshold) {
             return (oldHp >= threshold && newHp < threshold);
         }
@@ -268,7 +440,7 @@
             return (oldHp <= threshold && newHp > threshold);
         }
 
-        // --- 4. 遊戲初始化 ---
+        // --- 5. 遊戲初始化 ---
         function initGame() {
             monsterMaxHp = Math.floor(Math.random() * (1000 - 500 + 1)) + 500;
             monsterCurrentHp = monsterMaxHp;
@@ -277,18 +449,29 @@
             // UI 重置
             const btn = document.getElementById('action-btn');
             const btnText = document.getElementById('btn-text');
+            const cooldownBar = document.getElementById('cooldown-bar');
+            const boneEffect = document.getElementById('bone-effect');
+            
             btn.classList.remove('btn-next');
             btn.disabled = false;
             btnText.textContent = "⚔️ 攻擊";
+            cooldownBar.style.width = '0%';
             
             document.getElementById('monster').textContent = "🐺";
-            logMessage(`------------------------------`, "type-system");
-            logMessage(`新的狛克出現了！(HP: ${monsterMaxHp})`, "type-system");
+            boneEffect.classList.remove('bone-animate'); // 重置骨頭動畫
+            
+            logMessage(`------------------------------`, "");
+            // 新回合開頭的特殊處理，不使用前綴標題樣式
+            const logArea = document.getElementById('game-log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry type-system`;
+            entry.innerHTML = `新的狛克出現了！(HP: ${monsterMaxHp})`;
+            logArea.insertBefore(entry, logArea.firstChild);
             
             updateUI();
         }
 
-        // --- 5. 按鈕邏輯 ---
+        // --- 6. 按鈕邏輯 ---
         function handleBtnClick() {
             if (isBattleOver) {
                 initGame();
@@ -297,29 +480,141 @@
             performAttack();
         }
 
-        // --- 6. 戰鬥邏輯 ---
+        // --- 7. 戰鬥邏輯 ---
         function performAttack() {
             const btn = document.getElementById('action-btn');
             const btnText = document.getElementById('btn-text');
             const cooldownBar = document.getElementById('cooldown-bar');
-
-            // 隨機選擇武器
-            const weapon = weapons[Math.floor(Math.random() * weapons.length)];
             
-            // 計算數值 (負數=補血, 正數=傷害)
-            let value = 0;
-            if (weapon.min !== 0 || weapon.max !== 0) {
-                value = Math.floor(Math.random() * (weapon.max - weapon.min + 1)) + weapon.min;
+            // --- 連鎖行動計算 ---
+            let actions = [];
+            actions.push(executeAction(monsterCurrentHp));
+            let tempHp = actions[0].newHp;
+            
+            let safetyCounter = 0;
+            while (Math.random() < 0.2 && safetyCounter < 10) {
+                let prevHp = tempHp;
+                let nextAction = executeAction(prevHp);
+                nextAction.isWhipCorpse = (prevHp <= 0 && nextAction.rawType === 'damage');
+                
+                const connectors = ["緊接著", "然後", "再來", "隨即"];
+                nextAction.connector = connectors[Math.floor(Math.random() * connectors.length)];
+                if (nextAction.isWhipCorpse) {
+                    nextAction.connector = "鞭屍！";
+                }
+
+                actions.push(nextAction);
+                tempHp = nextAction.newHp;
+                safetyCounter++;
             }
 
-            processEffect(weapon, value);
+            // --- 決定前綴 (Prefix) ---
+            let totalValue = actions.reduce((sum, act) => sum + act.value, 0);
+            let finalHp = tempHp;
+            if (finalHp < 0) finalHp = 0;
 
-            // 觸發冷卻動畫
+            let prefix = "";
+            let prefixColorClass = "";
+            let isBoneTrigger = false;
+
+            if (actions.length === 1 && actions[0].message.includes("骨頭")) {
+                prefix = "骨頭！";
+                isBoneTrigger = true;
+            } else if (monsterCurrentHp > 0 && finalHp <= 0) {
+                prefix = "尾刀！";
+            } else if (totalValue > 0) {
+                prefix = "攻擊！";
+            } else if (totalValue < 0) {
+                prefix = "補血！";
+            } else {
+                prefix = "攻擊...？";
+            }
+
+            // 決定前綴顏色
+            if (totalValue > 0) prefixColorClass = "type-damage";
+            else if (totalValue < 0) prefixColorClass = "type-heal";
+            else prefixColorClass = "type-miss";
+
+            // --- 組合訊息 (HTML Construction) ---
+            
+            // 標題 (前綴獨立一行)
+            let htmlContent = `<div class="log-title ${prefixColorClass}">${prefix}</div>`;
+            
+            let currentTrackHp = monsterCurrentHp;
+            let fullTextForShake = "";
+
+            for (let i = 0; i < actions.length; i++) {
+                let act = actions[i];
+                fullTextForShake += act.message;
+
+                let actColorClass = "";
+                if (act.rawType === 'damage') actColorClass = "type-damage";
+                else if (act.rawType === 'heal') actColorClass = "type-heal";
+                else actColorClass = "type-miss";
+
+                // 連接詞 + 行動內容
+                if (i > 0) {
+                    // 連接詞與該次行動顏色一致
+                    htmlContent += `<br><br><span class="${actColorClass}">${act.connector}${act.message}</span>`;
+                } else {
+                    htmlContent += `<span class="${actColorClass}">${act.message}</span>`;
+                }
+
+                let nextTrackHp = currentTrackHp - act.value;
+                let displayPrev = currentTrackHp < 0 ? 0 : currentTrackHp;
+                let displayNext = nextTrackHp < 0 ? 0 : nextTrackHp;
+
+                let statusMessages = [];
+                collectStatusMessages(displayPrev, displayNext, statusMessages);
+                
+                if (statusMessages.length > 0) {
+                    htmlContent += "<br>" + statusMessages.join("<br>");
+                }
+
+                currentTrackHp = nextTrackHp;
+            }
+
+            // 勝利訊息 (換行顯示)
+            if (finalHp <= 0) {
+                htmlContent += `<br><span class="type-victory">狛克被打成薩摩耶了！</span>`;
+                isBattleOver = true;
+            }
+
+            // --- 輸出日誌 ---
+            logMessage(htmlContent, "");
+
+            // --- 更新 HP ---
+            monsterCurrentHp = finalHp;
+
+            // --- 視覺動畫 ---
+            const monsterElem = document.getElementById('monster');
+            monsterElem.classList.remove('shake', 'shake-hard', 'spin'); 
+            void monsterElem.offsetWidth;
+            
+            const boneEffect = document.getElementById('bone-effect');
+            boneEffect.classList.remove('bone-animate');
+            if (isBoneTrigger) {
+                void boneEffect.offsetWidth;
+                boneEffect.classList.add('bone-animate');
+            }
+
+            if (fullTextForShake.includes("嗚汪啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊")) {
+                monsterElem.classList.add('shake-hard');
+            } else if (totalValue > 0) {
+                monsterElem.classList.add('shake');
+            } else {
+                monsterElem.classList.add('spin');
+            }
+
+            updateUI();
+
+            if (isBattleOver) return;
+
             btn.disabled = true;
             btnText.textContent = "充能中...";
             cooldownBar.style.transition = 'none';
             cooldownBar.style.width = '0%';
-            void cooldownBar.offsetWidth; // 強制重繪
+            void cooldownBar.offsetWidth;
             cooldownBar.style.transition = `width ${cooldownTime}ms linear`;
             cooldownBar.style.width = '100%';
 
@@ -327,80 +622,69 @@
                 if (!isBattleOver) {
                     btn.disabled = false;
                     btnText.textContent = "⚔️ 攻擊";
+                    cooldownBar.style.transition = 'none';
+                    cooldownBar.style.width = '0%';
                 }
-                cooldownBar.style.transition = 'none';
-                cooldownBar.style.width = '0%';
             }, cooldownTime);
         }
 
-        function processEffect(weapon, value) {
-            const monsterElem = document.getElementById('monster');
-            let logType = "";
-            let message = "";
-            const isMiss = (weapon.min === 0 && weapon.max === 0);
-
-            // 1. 產生基礎訊息
-            if (isMiss) {
-                message = `${weapon.col1}<br>${weapon.col2}`;
-                logType = "type-miss";
-            } else if (weapon.col2 === "a") {
-                message = weapon.col1;
-                if (value < 0) logType = "type-heal";
-                else logType = "type-damage";
-            } else {
-                message = `${weapon.col1} <strong>${Math.abs(value)}</strong> ${weapon.col2}`;
-                if (value < 0) logType = "type-heal";
-                else logType = "type-damage";
+        // 獨立出的行動計算函數
+        function executeAction(currentHp) {
+            const weapon = weapons[Math.floor(Math.random() * weapons.length)];
+            let value = 0;
+            if (weapon.min !== 0 || weapon.max !== 0) {
+                value = Math.floor(Math.random() * (weapon.max - weapon.min + 1)) + weapon.min;
             }
 
-            // 替換 owowowo
+            let message = "";
+            let rawType = "";
+
+            const isMiss = (weapon.min === 0 && weapon.max === 0);
+
+            if (isMiss) {
+                message = `${weapon.col1}<br>${weapon.col2}`;
+                rawType = "miss";
+            } else if (weapon.col2 === "a") {
+                message = weapon.col1;
+                rawType = (value < 0) ? "heal" : "damage";
+            } else {
+                message = `${weapon.col1} <strong>${Math.abs(value)}</strong> ${weapon.col2}`;
+                rawType = (value < 0) ? "heal" : "damage";
+            }
+
             if (message.includes("owowowo")) {
                 const randomVal = Math.floor(Math.random() * 100) + 1;
                 message = message.replace(/owowowo/g, `<strong>${randomVal}</strong>`);
             }
 
-            // 2. 計算血量變化與特殊狀態
-            const oldHp = monsterCurrentHp;
-            let newHp = monsterCurrentHp;
-            
+            let newHp = currentHp;
             if (!isMiss) {
-                newHp -= value; // 傷害為正，所以減去 value (補血為負，減去負值變加)
-            }
-            
-            // 注意：這裡不設定上限，允許過量補血 (Overheal)
-            if (newHp < 0) newHp = 0;
-
-            // 3. 檢查特殊閾值對話
-            let statusMessage = "";
-            if (getDownHpChange(oldHp, newHp, 100)) {
-                statusMessage = "狛克看起來已經沒有力氣掙扎了！";
-            } else if (getDownHpChange(oldHp, newHp, 300)) {
-                statusMessage = "狛克看起來非常的虛弱！";
-            } else if (getUpHpChange(oldHp, newHp, 1500)) {
-                statusMessage = "狛克全身散發著神聖的光芒！";
-            } else if (getUpHpChange(oldHp, newHp, 1000)) {
-                statusMessage = "狛克感到前所未有的亢奮！";
-            } else if (getUpHpChange(oldHp, newHp, 100)) {
-                statusMessage = "狛克他重新站起來了！";
+                newHp -= value;
             }
 
-            // 4. 更新狀態
-            monsterCurrentHp = newHp;
+            return {
+                newHp: newHp,
+                message: message,
+                rawType: rawType,
+                value: isMiss ? 0 : value
+            };
+        }
 
-            // 5. 輸出日誌
-            logMessage(message, logType);
-            if (statusMessage) {
-                logMessage(statusMessage, "type-status");
+        function collectStatusMessages(oldHp, newHp, msgArray) {
+            let displayOld = oldHp < 0 ? 0 : oldHp;
+            let displayNew = newHp < 0 ? 0 : newHp;
+
+            if (getDownHpChange(displayOld, displayNew, 100)) {
+                msgArray.push(`<span class="type-status">狛克看起來已經沒有力氣掙扎了！</span>`);
+            } else if (getDownHpChange(displayOld, displayNew, 300)) {
+                msgArray.push(`<span class="type-status">狛克看起來非常的虛弱！</span>`);
+            } else if (getUpHpChange(displayOld, displayNew, 1500)) {
+                msgArray.push(`<span class="type-status">狛克全身散發著神聖的光芒！</span>`);
+            } else if (getUpHpChange(displayOld, displayNew, 1000)) {
+                msgArray.push(`<span class="type-status">狛克感到前所未有的亢奮！</span>`);
+            } else if (getUpHpChange(displayOld, displayNew, 100)) {
+                msgArray.push(`<span class="type-status">狛克他重新站起來了！</span>`);
             }
-
-            // 6. 視覺更新
-            if (value > 0) { // 有造成傷害才震動
-                monsterElem.classList.remove('shake');
-                void monsterElem.offsetWidth;
-                monsterElem.classList.add('shake');
-            }
-
-            updateUI();
         }
 
         function updateUI() {
@@ -409,15 +693,14 @@
             const monsterElem = document.getElementById('monster');
             const btn = document.getElementById('action-btn');
             const btnText = document.getElementById('btn-text');
+            const cooldownBar = document.getElementById('cooldown-bar');
 
-            // 計算百分比，若超過 100% 就顯示為 100% 但加上發光特效
             let percentage = (monsterCurrentHp / monsterMaxHp) * 100;
             let displayPercentage = percentage > 100 ? 100 : percentage;
 
             hpBarFill.style.width = displayPercentage + "%";
             document.getElementById('hp-text').textContent = `${monsterCurrentHp} / ${monsterMaxHp}`;
 
-            // 處理過量補血特效 (Overheal)
             if (monsterCurrentHp > monsterMaxHp) {
                 hpContainer.classList.add('overheal-glow');
                 hpBarFill.classList.add('overheal-fill');
@@ -426,18 +709,14 @@
                 hpBarFill.classList.remove('overheal-fill');
             }
 
-            // 處理死亡邏輯
             if (monsterCurrentHp <= 0) {
-                monsterElem.textContent = "☠️";
-                if (!isBattleOver) {
-                    logMessage("恭喜！你成功討伐了狛克！", "type-damage");
-                    isBattleOver = true;
-                    // 切換按鈕狀態
+                monsterElem.textContent = "🐕";
+                if (isBattleOver) {
                     btn.classList.add('btn-next');
-                    btn.disabled = false; // 確保按鈕可按
+                    btn.disabled = false;
                     btnText.textContent = "⏩ 下一隻";
-                    // 移除冷卻動畫
-                    document.getElementById('cooldown-bar').style.width = '0%';
+                    cooldownBar.style.transition = 'none';
+                    cooldownBar.style.width = '0%';
                 }
             } else {
                 monsterElem.textContent = "🐺";
@@ -449,12 +728,62 @@
             const entry = document.createElement('div');
             entry.className = `log-entry ${typeClass}`;
             entry.innerHTML = msg;
-            // 保持最新的訊息在最上方
             logArea.insertBefore(entry, logArea.firstChild);
         }
 
-        // 啟動遊戲
+        // --- 8. Tips 邏輯 ---
+        let tipsInterval;
+        const tipsElem = document.getElementById('tips-text');
+        
+        function startTipsAnimation() {
+            // 先顯示第一則
+            changeTip();
+
+            // 設定每 15 秒切換
+            setInterval(async () => {
+                await typeWriterEffect(tipsElem, ""); // 刪除
+                changeTip(); // 換內容 (這一步會被下面的 typeWriterEffect 覆蓋，但我們邏輯分開)
+            }, 15000);
+        }
+
+        async function changeTip() {
+            const randomTip = tipsList[Math.floor(Math.random() * tipsList.length)];
+            await typeWriterEffect(tipsElem, randomTip);
+        }
+
+        function typeWriterEffect(element, text) {
+            return new Promise(resolve => {
+                const currentText = element.textContent;
+                // 如果是刪除模式 (目標是空字串)
+                if (text === "") {
+                    let i = currentText.length;
+                    const interval = setInterval(() => {
+                        element.textContent = currentText.substring(0, i - 1);
+                        i--;
+                        if (i < 0) {
+                            clearInterval(interval);
+                            resolve();
+                        }
+                    }, 30); // 刪除速度
+                } else {
+                    // 打字模式
+                    let i = 0;
+                    element.textContent = "";
+                    const interval = setInterval(() => {
+                        element.textContent += text.charAt(i);
+                        i++;
+                        if (i >= text.length) {
+                            clearInterval(interval);
+                            resolve();
+                        }
+                    }, 50); // 打字速度
+                }
+            });
+        }
+
+        // 啟動
         initGame();
+        startTipsAnimation();
 
     </script>
 </body>
