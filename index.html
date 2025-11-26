@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>打怪物小遊戲</title>
+    <title>討伐狛克！</title>
     <style>
         :root {
             --primary-color: #e74c3c;
@@ -29,17 +29,18 @@
             padding: 2rem;
             border-radius: 15px;
             text-align: center;
-            width: 350px;
+            width: 400px;
             box-shadow: 0 10px 20px rgba(0,0,0,0.5);
         }
 
-        h1 { margin-bottom: 20px; font-size: 1.5rem; }
+        h1 { margin-bottom: 20px; font-size: 1.8rem; }
 
         /* 怪物狀態區 */
         .monster-box {
-            font-size: 5rem;
+            font-size: 6rem;
             margin: 20px 0;
             transition: transform 0.1s;
+            cursor: default;
         }
         
         .shake { animation: shake 0.5s; }
@@ -47,8 +48,8 @@
         .hp-bar-container {
             width: 100%;
             background-color: #555;
-            height: 20px;
-            border-radius: 10px;
+            height: 25px;
+            border-radius: 12.5px;
             overflow: hidden;
             margin-bottom: 20px;
             position: relative;
@@ -66,9 +67,10 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 12px;
+            font-size: 14px;
             font-weight: bold;
             text-shadow: 1px 1px 2px black;
+            width: 100%;
         }
 
         /* 攻擊按鈕與冷卻動畫 */
@@ -81,9 +83,11 @@
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            overflow: hidden; /* 為了讓進度條不超出按鈕 */
+            overflow: hidden;
             transition: background 0.3s;
-            z-index: 1; /* 確保文字在進度條上方 */
+            z-index: 1;
+            width: 100%;
+            font-weight: bold;
         }
 
         #attack-btn:hover:not(:disabled) {
@@ -96,7 +100,6 @@
             color: #ccc;
         }
 
-        /* 冷卻進度條覆蓋層 */
         .cooldown-overlay {
             position: absolute;
             top: 0;
@@ -104,28 +107,28 @@
             height: 100%;
             width: 0%;
             background-color: rgba(0, 0, 0, 0.3);
-            z-index: -1; /* 放在文字下方 */
+            z-index: -1;
         }
 
         /* 訊息日誌區 */
         .log-area {
             margin-top: 20px;
-            height: 120px;
+            height: 150px;
             background: rgba(0, 0, 0, 0.2);
             border-radius: 5px;
             padding: 10px;
             overflow-y: auto;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             text-align: left;
             border: 1px solid #555;
+            line-height: 1.4;
         }
 
-        .log-entry { margin-bottom: 5px; border-bottom: 1px solid #444; padding-bottom: 2px;}
+        .log-entry { margin-bottom: 8px; border-bottom: 1px solid #444; padding-bottom: 4px; word-wrap: break-word;}
         .type-damage { color: #ff7675; }
         .type-heal { color: #55efc4; }
         .type-miss { color: #ffeaa7; }
 
-        /* 動畫定義 */
         @keyframes shake {
             0% { transform: translate(1px, 1px) rotate(0deg); }
             10% { transform: translate(-1px, -2px) rotate(-1deg); }
@@ -144,14 +147,14 @@
 <body>
 
     <div class="game-container">
-        <h1>👾 史萊姆討伐戰</h1>
+        <h1>討伐狛克！</h1>
         
         <div class="hp-bar-container">
             <div class="hp-bar-fill" id="hp-bar"></div>
-            <span class="hp-text" id="hp-text">100 / 100</span>
+            <span class="hp-text" id="hp-text">Loading...</span>
         </div>
 
-        <div class="monster-box" id="monster">👾</div>
+        <div class="monster-box" id="monster">🐺</div>
 
         <button id="attack-btn" onclick="performAction()">
             <span class="btn-text">⚔️ 攻擊</span>
@@ -164,56 +167,25 @@
     </div>
 
     <script>
-        // --- 1. 遊戲設定與資料 ---
-        let monsterMaxHp = 100;
-        let monsterCurrentHp = 100;
+        // --- 1. 遊戲設定 ---
+        // 初始血量隨機 500 ~ 1000
+        let monsterMaxHp = Math.floor(Math.random() * (1000 - 500 + 1)) + 500;
+        let monsterCurrentHp = monsterMaxHp;
         const cooldownTime = 3000; // 3秒冷卻
 
-        // 定義武器庫 (隨機池)
+        // 初始化血條顯示
+        document.getElementById('hp-text').textContent = `${monsterCurrentHp} / ${monsterMaxHp}`;
+
+        // --- 2. 武器資料庫 (從 CSV 轉換而來) ---
         const weapons = [
-            { 
-                name: "生鏽的鐵劍", 
-                type: "damage", 
-                min: 5, 
-                max: 10, 
-                template: "你揮舞{name}，造成了 {value} 點傷害！" 
-            },
-            { 
-                name: "傳說聖劍", 
-                type: "damage", 
-                min: 20, 
-                max: 35, 
-                template: "發出金光！{name}一擊造成了 {value} 點暴擊傷害！" 
-            },
-            { 
-                name: "奇怪的藥水", 
-                type: "heal", 
-                min: 10, 
-                max: 20, 
-                template: "你不小心把藥水丟向怪物... 怪物回復了 {value} 點血量。" 
-            },
-            { 
-                name: "揮空了", 
-                type: "miss", 
-                min: 0, 
-                max: 0, 
-                template: "你腳滑了一下，攻擊無效！(0傷害)" 
-            },
-            { 
-                name: "火焰魔法", 
-                type: "damage", 
-                min: 12, 
-                max: 18, 
-                template: "你施放{name}，燒傷了怪物 {value} 點。" 
-            }
+            {"col1": "你用小提琴砸向狛克，造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你拿起球棒砸向狛克，造成了", "col2": "點傷害。", "min": 1, "max": 70}, {"col1": "你用冰椎刺向狛克，造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你用巨大的木槌槌向狛克，造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你用小提琴砸向狛克，然而狛克比較耐打，只造成了", "col2": "點傷害。", "min": 1, "max": 40}, {"col1": "你用非洲人的怨念燃燒狛克，造成了", "col2": "點真實傷害。", "min": 50, "max": 150}, {"col1": "你用沖天炮轟炸狛克，造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你用飛矛射向狛克，造成了", "col2": "點傷害。", "min": 10, "max": 120}, {"col1": "你用骨頭丟向狛克，傷害相當顯著，造成了", "col2": "點傷害。", "min": 70, "max": 140}, {"col1": "你用拳頭揍向狛克，造成了", "col2": "點傷害。", "min": 1, "max": 80}, {"col1": "你拿willisome的東西丟向狛克，狛克果斷的撲接了，並往旁邊一甩。", "col2": "很遺憾的，完全沒有傷害。", "min": 0, "max": 0}, {"col1": "你用長長的木棒貫穿了狛克，造成了", "col2": "點傷害。", "min": 50, "max": 100}, {"col1": "你召喚洪水襲向狛克，造成了", "col2": "點傷害。非常遺憾，北極狼還是會游泳的。", "min": 1, "max": 10}, {"col1": "你用身高鄙視狛克，造成了", "col2": "點真實傷害。", "min": 80, "max": 180}, {"col1": "你用肚肚壓住狛克，造成了...", "col2": "不，狛克看起來非常享受，傷害被免疫掉了。", "min": 0, "max": 0}, {"col1": "你召雷劈向狛克，造成了", "col2": "點傷害。", "min": 1, "max": 140}, {"col1": "你抄起一把扇子直擊狛克面門，造成了", "col2": "點傷害。", "min": 1, "max": 60}, {"col1": "你抽刀斬向狛克，造成了", "col2": "點傷害。", "min": 30, "max": 110}, {"col1": "你用巧克力丟向狛克，狛克瞬間接住並吃掉了。狛克回復了", "col2": "點血量。", "min": -100, "max": -1}, {"col1": "你撲抱狛克，造成了", "col2": "點驚嚇傷害，並且狛克順手回抱了你。", "min": 1, "max": 5}, {"col1": "你用腳踹向狛克，精準命中要害，造成了不可言喻的傷害。", "col2": "a", "min": 150, "max": 300}, {"col1": "你從後面接近狛克並突然抓住尾巴，造成了", "col2": "點傷害。似乎是被嚇到的關係，你聽到狛克發出悶哼聲。", "min": 1, "max": 20}, {"col1": "你用拉麵丟向狛克，狛克避開了碗吃完了拉麵，不只沒造成傷害，甚至回復了", "col2": "點血量。", "min": -100, "max": -1}, {"col1": "你用板凳砸向狛克，造成了", "col2": "點傷害。", "min": 100, "max": 150}, {"col1": "你在狛克的晚餐裡偷偷放了辣椒，吃下去的狛克受到了", "col2": "點傷害。", "min": 40, "max": 100}, {"col1": "你在狛克耳朵旁邊突然吹氣，造成了", "col2": "點驚嚇傷害。狛克瞬間跳起來遠離你五公尺，看來嚇得不輕。", "min": 1, "max": 100}, {"col1": "你隨便拿個什麼就砸向狛克，丟出去的冷凍牛排傷害顯著，造成了", "col2": "點傷害。", "min": 150, "max": 200}, {"col1": "你隨便拿個什麼就砸向狛克，丟出去的布偶傷害薄弱，對狛克造成了", "col2": "點傷害。", "min": 1, "max": 5}, {"col1": "你隨便拿個什麼就砸向狛克，丟出去的麻將對狛克造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你隨便拿個什麼就砸向狛克，丟出去的守護神封印罐中跳出了水星神，幫狛克回復了", "col2": "點血量。", "min": -80, "max": -40}, {"col1": "你在狛克面前胡出了國士無雙，造成了", "col2": "點真實傷害。", "min": 80, "max": 120}, {"col1": "你把黑糖珍奶丟給狛克，狛克感激地接住並且開始狂喝，回復了", "col2": "點血量。", "min": -150, "max": -50}, {"col1": "你拉開狛克的衣領把冰塊丟進去，造成了", "col2": "點傷害，然後抗寒的雪狼狛克淡定的拿出來了。", "min": 1, "max": 10}, {"col1": "你把有很多獸太的「教學影片」傳送給狛克，上課不小心打開聊天室的狛克紅著臉衝出教室，造成了", "col2": "點波蘭真實傷害。", "min": 20, "max": 30}, {"col1": "你用字典砸向狛克，造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你用鑽石劍刺向狛克，狛克舉盾防禦，只造成了", "col2": "點傷害。", "min": 1, "max": 20}, {"col1": "你掏出一把PKM對狛克掃射，造成了", "col2": "點傷害。", "min": 100, "max": 200}, {"col1": "你掏出一把PKM對狛克掃射，造成了", "col2": "點傷害。", "min": 100, "max": 200}, {"col1": "你掏出一把PKM對狛克掃射，造成了...", "col2": "狛克的偶爾防彈特性觸發了，沒有造成傷害。", "min": 0, "max": 0}, {"col1": "你在狛克耳邊輕聲說道「TEmPTaTiON」，狛克的手臂不自覺的開始痠痛，造成了", "col2": "點傷害。", "min": 1, "max": 80}, {"col1": "你Lost River了狛克，造成了", "col2": "點真實傷害。", "min": 100, "max": 180}, {"col1": "你用桌電主機砸向狛克，造成了", "col2": "點傷害。", "min": 50, "max": 150}, {"col1": "你用人孔蓋掀翻狛克，造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你/tp 狛克 0 -64 0，造成了", "col2": "點虛空傷害。", "min": 20, "max": 150}, {"col1": "你舉起了壓路機丟向狛克，狛克說了句「是和我同類型的替身呢」之後就瞬間移動到你面前。", "col2": "很遺憾，沒有命中。", "min": 0, "max": 0}, {"col1": "你把狛克埋進雪地裡，造成了", "col2": "點傷害，然後抗寒的雪狼狛克在地上做出了雪天使。", "min": 1, "max": 15}, {"col1": "你把馬鈴薯砸向狛克，造成了", "col2": "點傷害。", "min": 1, "max": 60}, {"col1": "你把狛克國中時的群組聊天紀錄給狛克看，狛克只看了一眼就驚慌失措的狂奔，造成了", "col2": "點真實傷害。", "min": 120, "max": 200}, {"col1": "你普攻巴龍之後丟下被擊飛的狛克走掉，巴龍對狛克造成了", "col2": "點傷害。", "min": 10, "max": 100}, {"col1": "你用Pocky刺向狛克，狛克敏捷的叼住另外一端吃掉了。狛克回復了", "col2": "點血量。", "min": -50, "max": -1}, {"col1": "你在八月把狛克拖出房間，狛克瞬間融化成液體，造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你對狛克打出了一組同花順。造成了...", "col2": "狛克打出一張迴轉，攻擊被免疫了。", "min": 0, "max": 0}, {"col1": "你無聲無息的站在狛克背後，十分鐘後轉頭的狛克嗚汪啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊！", "col2": "a", "min": 20, "max": 80}, {"col1": "你用鞭子抽向狛克，造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你用椰子丟向狛克，造成了", "col2": "點傷害。", "min": 20, "max": 120}, {"col1": "你用板磚拍向狛克，造成了", "col2": "點傷害。", "min": 1, "max": 90}, {"col1": "你在狛克附近剖開了榴槤，對鼻子靈敏的狛克造成了", "col2": "點傷害。", "min": 40, "max": 70}, {"col1": "你用加了瀉藥的巧克力丟向狛克，狛克瞬間接住吃掉之後才發現不對勁。在三小時後造成了", "col2": "點傷害。", "min": 20, "max": 100}, {"col1": "你拉著狛克上了計程車從台北開到高雄，易暈車的狛克到了之後跪地狂吐。造成了", "col2": "點傷害。", "min": 30, "max": 120}, {"col1": "你用起司片甩了狛克一巴掌，造成了", "col2": "點傷害。", "min": 1, "max": 80}, {"col1": "你在狛克面前買走了最後一個薯餅，造成了", "col2": "點真實傷害。", "min": 70, "max": 120}, {"col1": "木板不足以支撐兩個人的重量，你成功把狛克趕了下水，冰冷的海水對狛克造成了", "col2": "點傷害。", "min": 40, "max": 90}, {"col1": "真相只有一個！你把麻醉針射向了狛克的頸部，造成了", "col2": "點傷害。", "min": 1, "max": 10}, {"col1": "你觸發了雪狛bot的bug，咚！Discord沒有回應，狛克來不及儲存剛剛寫的程式。兩小時心血白費的狛克受到", "col2": "點真實傷害。", "min": 100, "max": 150}, {"col1": "狛克太久沒有回去以爾索拉，你告知狛克兩隻小狸貓決定離他而去的消息，造成了", "col2": "點傷害。", "min": 80, "max": 120}, {"col1": "你偷偷溜進了狛克的房間，把Discord介面設定成明亮，在深夜使用Discord的狛克受到了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你用力把足球踢向狛克，但是狛克成功抓住了，周圍的小朋友一擁而上稱讚狛克，被治癒的狛克回復了", "col2": "點血量。", "min": -100, "max": -1}, {"col1": "你用正太音對著狛克說「あいしてる」，心臟爆擊的狛克回復了", "col2": "點血量，隨即幸福的閉上眼睛。", "min": -130, "max": -1}, {"col1": "狛克爬上了一連串的階梯，回到宿舍狛克才發現東西漏了在教室，看著那又長又陡斜的階梯，狛克受到了", "col2": "點真實傷害。", "min": 1, "max": 150}, {"col1": "你上前追問狛克之前的點歌活動甚麼時候唱你的歌，狛克因為心理壓力受到了", "col2": "點真實傷害。", "min": 1, "max": 70}, {"col1": "你把珍奶丟給狛克，狛克感激地接住並且開始狂喝才發現那是無糖的，狛克受到了", "col2": "點傷害。", "min": 50, "max": 150}, {"col1": "你扯著狛克的毛試圖把藍色的部分撕掉，造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你用烤吐司砸向狛克，狛克飛撲並瞬間啃完，回復了", "col2": "點血量。", "min": -80, "max": -40}, {"col1": "你把狛克Live a Hero帳號的石頭抽光，而且還沒抽到任何新角，狛克受到了", "col2": "點真實傷害，而且狛克從今以後都會恨你。", "min": 100, "max": 120}, {"col1": "你不小心把鬧鬼魔鏡玩裂，還留在鬼屋裡的狛克瞬間被鬼...", "col2": "狛克光速燒掉手上的聖木，逃過了鬼的攻擊。", "min": 0, "max": 0}, {"col1": "你咬了狛克一口，造成了", "col2": "點傷害。", "min": 1, "max": 50}, {"col1": "你在狛克打Maimai時連機故意選了那個很會魔法的阿嬤，完全跟不上的狛克不小心撞到指甲，造成了", "col2": "點傷害。", "min": 60, "max": 140}, {"col1": "你用字典砸向狛克，可是是用角，造成了", "col2": "點傷害。", "min": 1, "max": 150}, {"col1": "你故意推薦了一本還沒完結的小說給狛克，看完卻看不到結局的狛克產生了強烈的怨念，造成了", "col2": "點真實傷害。", "min": 1, "max": 80}, {"col1": "你發現狛克房間沒鎖走了進去，躺在床上的狛克嗚汪啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊！", "col2": "a", "min": 100, "max": 200}, {"col1": "你用棒球丟向狛克，造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你用十字架砸向狛克，很可惜狛克是神聖屬性不會被超渡，造成了", "col2": "點傷害。", "min": 1, "max": 10}, {"col1": "你用融化的冰淇淋砸向狛克，全身變得黏答答的狛克精神不堪重負，造成了", "col2": "點真實傷害。", "min": 70, "max": 170}, {"col1": "你拿著雪花冰朝狛克灌下去，狛克成功在碗到達地面前全部解決，回復了", "col2": "點血量。", "min": -90, "max": -30}, {"col1": "你用在太陽下曬了三小時的鐵板襲向狛克，狛克用魔法強制降溫，只造成了", "col2": "點傷害。", "min": 1, "max": 30}, {"col1": "你用飛鏢射向狛克，造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你拿燒成焦炭的吐司強制餵食狛克，造成了", "col2": "點傷害。", "min": 50, "max": 120}, {"col1": "你叫來了FBI，被帶走審訊的狛克被FBI造成了", "col2": "點傷害，而且狛克雙腿發軟的回來。", "min": 100, "max": 200}, {"col1": "你在狛克在的語音頻道裡炸麥，造成了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你在跟狛克剪刀石頭布的時候往狛克臉上出了石頭，造成了", "col2": "點傷害。", "min": 1, "max": 70}, {"col1": "你把狛克的棉被搶走，造成了", "col2": "點寒氣傷害。", "min": 50, "max": 100}, {"col1": "你扯著狛克的毛試圖把藍色的部分撕掉，造成了...", "col2": "狛克抓住你拿起一捆藍色膠帶把你纏成木乃伊，反過來對你造成了owowowo點傷害。", "min": 0, "max": 0}, {"col1": "你想不到該怎麼打狛克，但是狛克仍然受到了", "col2": "點傷害。", "min": 1, "max": 100}, {"col1": "你開著卡車撞向叼著吐司剛跑到路口的狛克，狛克受到了", "col2": "點傷害。", "min": 50, "max": 250}, {"col1": "你開著卡車撞向叼著吐司剛跑到路口的狛克，狛克受到了...", "col2": "狛克身上發出女神的光芒！你被傳送到異世界了！", "min": 0, "max": 0}, {"col1": "你掏出精靈球往狛克頭頂bonk下去，造成了", "col2": "點傷害。", "min": 50, "max": 100}, {"col1": "你在殯儀師狛克面前把鴨腿給報警了，造成了", "col2": "點真實傷害，並且他會恨你。", "min": 40, "max": 90}, {"col1": "你拿熊皮袋把狛克整隻裝起來綁住，造成了", "col2": "點窒息傷害。", "min": 1, "max": 70}, {"col1": "你強行餵了狛克耐久值1%的生狼肉，上吐下瀉的狛克受到了", "col2": "點傷害。", "min": 80, "max": 160}, {"col1": "你用望潮吸取狛克的靈魂，造成了", "col2": "點真實傷害。", "min": 40, "max": 100}, {"col1": "你用青鸞朝著狛克射擊，造成了...", "col2": "狛克迅速位移，躲掉了這發攻擊！", "min": 0, "max": 0}, {"col1": "你塞了一隻長得很怪的五格狗給狛克，回想起某款拼圖遊戲恐懼的狛克受到了", "col2": "點真實傷害。", "min": 20, "max": 110}, {"col1": "你對狛克使用了危險的杵，狛克拚死防禦，但仍然受到了", "col2": "點傷害。", "min": 100, "max": 200}, {"col1": "你對狛克使用了危險的杵，造成了...", "col2": "你忘記你有危險的缽了！危險的杵對你造成了owowowo點傷害！", "min": 0, "max": 0}, {"col1": "你舉起消防斧砍向狛克，造成了", "col2": "點傷害。", "min": 70, "max": 150}, {"col1": "你對狛克使用了急救，回復了", "col2": "點血量。", "min": -40, "max": -1}, {"col1": "你對狛克使用了急救，回復了......大失敗！你的醫療包敲到了狛克的腳，造成了", "col2": "點傷害，並且伴隨著狛克的淒厲悲鳴。", "min": 1, "max": 40}, {"col1": "你對狛克扔了一個黑色的酷盤子，上面的毒對狛克造成了", "col2": "點傷害。", "min": 20, "max": 100}, {"col1": "你用普通心理學課本砸向狛克，造成了", "col2": "點傷害。", "min": 50, "max": 100}
         ];
 
-        // --- 2. 核心功能 ---
+        // --- 3. 核心功能 ---
 
         function performAction() {
-            // 檢查怪物是否已經死亡
             if (monsterCurrentHp <= 0) {
-                logMessage("怪物已經被打倒了！請重新整理頁面再來一場。", "type-miss");
+                logMessage("狛克已經被討伐了！請重新整理頁面再來一場。", "type-miss");
                 return;
             }
 
@@ -221,37 +193,31 @@
             const btnText = btn.querySelector('.btn-text');
             const cooldownBar = document.getElementById('cooldown-bar');
 
-            // 1. 隨機選擇武器
+            // 隨機選擇武器
             const weapon = weapons[Math.floor(Math.random() * weapons.length)];
             
-            // 2. 計算數值 (傷害或補血)
-            // 公式: Math.floor(Math.random() * (Max - Min + 1)) + Min
-            const value = Math.floor(Math.random() * (weapon.max - weapon.min + 1)) + weapon.min;
+            // 計算數值 (負數=補血, 正數=傷害)
+            let value = 0;
+            // 如果上下限都是0，則數值為0
+            if (weapon.min !== 0 || weapon.max !== 0) {
+                // 公式：Math.floor(Math.random() * (Max - Min + 1)) + Min
+                value = Math.floor(Math.random() * (weapon.max - weapon.min + 1)) + weapon.min;
+            }
 
-            // 3. 執行效果與更新畫面
             processEffect(weapon, value);
 
-            // 4. 處理冷卻 (按鈕禁用與動畫)
+            // 處理冷卻 (動畫)
             btn.disabled = true;
             btnText.textContent = "充能中...";
-            
-            // 使用 CSS Transition 來做充能動畫
-            // 先強制重設寬度為 0 (無動畫)，然後設定為 100% (有動畫)
             cooldownBar.style.transition = 'none';
             cooldownBar.style.width = '0%';
-            
-            // 強制瀏覽器重繪 (Reflow)，讓 transition 生效
-            void cooldownBar.offsetWidth; 
-
-            // 開始動畫
+            void cooldownBar.offsetWidth; // 觸發重繪
             cooldownBar.style.transition = `width ${cooldownTime}ms linear`;
             cooldownBar.style.width = '100%';
 
-            // 3秒後恢復
             setTimeout(() => {
                 btn.disabled = false;
                 btnText.textContent = "⚔️ 攻擊";
-                // 重置動畫條
                 cooldownBar.style.transition = 'none';
                 cooldownBar.style.width = '0%';
             }, cooldownTime);
@@ -259,25 +225,55 @@
 
         function processEffect(weapon, value) {
             const monsterElem = document.getElementById('monster');
+            let logType = "";
+            let message = "";
 
-            // 替換模板文字
-            let message = weapon.template
-                            .replace("{name}", `<strong>${weapon.name}</strong>`)
-                            .replace("{value}", `<strong>${value}</strong>`);
+            // 判斷是否為無傷害 (Miss) 類型 (Min=0, Max=0)
+            const isMiss = (weapon.min === 0 && weapon.max === 0);
 
-            if (weapon.type === 'damage') {
-                monsterCurrentHp -= value;
-                monsterElem.classList.remove('shake'); // 重置動畫類別
-                void monsterElem.offsetWidth; // 觸發重繪
-                monsterElem.classList.add('shake'); // 受傷震動特效
-                logMessage(message, "type-damage");
-            } else if (weapon.type === 'heal') {
-                monsterCurrentHp += value;
-                logMessage(message, "type-heal");
+            // 組合文字
+            if (isMiss) {
+                // 規則(2): 無傷害的情況下，輸出文字為"第一欄文字 (換行) 第二欄文字"
+                message = `${weapon.col1}<br>${weapon.col2}`;
+                logType = "type-miss";
+            } else if (weapon.col2 === "a") {
+                // ★ 新增規則(4): 若第二欄為"a"，則輸出文字僅輸出第一欄文字
+                message = weapon.col1;
+                
+                // 依然要判斷是傷害還是補血來決定顏色
+                if (value < 0) logType = "type-heal";
+                else logType = "type-damage";
             } else {
-                logMessage(message, "type-miss");
+                // 規則(1): 正常情況下，輸出文字為"第一欄文字 傷害或補血數值 第二欄文字"
+                message = `${weapon.col1} <strong>${Math.abs(value)}</strong> ${weapon.col2}`;
+                
+                if (value < 0) logType = "type-heal";
+                else logType = "type-damage";
             }
 
+            // 規則(3): 文字有owowowo的情況下，替換成1到100的隨機數字
+            // 這部分邏輯：檢查 message 字串，如果有 'owowowo'，就生成一個隨機數替換掉
+            if (message.includes("owowowo")) {
+                const randomVal = Math.floor(Math.random() * 100) + 1;
+                // 使用正則表達式全域替換 (/g)
+                message = message.replace(/owowowo/g, `<strong>${randomVal}</strong>`);
+            }
+
+            // 更新血量
+            if (!isMiss) {
+                // 傷害是正數，要扣除 (monsterCurrentHp -= value)
+                // 補血是負數，扣除負數等於加血
+                monsterCurrentHp -= value;
+            }
+
+            // 更新畫面特效與日誌
+            if (value > 0) {
+                monsterElem.classList.remove('shake');
+                void monsterElem.offsetWidth;
+                monsterElem.classList.add('shake');
+            }
+
+            logMessage(message, logType);
             updateUI();
         }
 
@@ -286,7 +282,7 @@
             if (monsterCurrentHp < 0) monsterCurrentHp = 0;
             if (monsterCurrentHp > monsterMaxHp) monsterCurrentHp = monsterMaxHp;
 
-            // 更新血條寬度與文字
+            // 更新血條
             const percentage = (monsterCurrentHp / monsterMaxHp) * 100;
             document.getElementById('hp-bar').style.width = percentage + "%";
             document.getElementById('hp-text').textContent = `${monsterCurrentHp} / ${monsterMaxHp}`;
@@ -295,11 +291,9 @@
             const monsterElem = document.getElementById('monster');
             if (monsterCurrentHp <= 0) {
                 monsterElem.textContent = "☠️";
-                logMessage("恭喜！你討伐了怪物！", "type-damage");
-            } else if (monsterCurrentHp < 30) {
-                monsterElem.textContent = "😰";
+                logMessage("恭喜！你成功討伐了狛克！", "type-damage");
             } else {
-                monsterElem.textContent = "👾";
+                monsterElem.textContent = "🐺";
             }
         }
 
@@ -308,8 +302,6 @@
             const entry = document.createElement('div');
             entry.className = `log-entry ${typeClass}`;
             entry.innerHTML = msg;
-            
-            // 新訊息插入在最上方
             logArea.insertBefore(entry, logArea.firstChild);
         }
     </script>
